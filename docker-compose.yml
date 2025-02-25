@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  langchain-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: langchain-template:latest
+    container_name: langchain-template
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MODEL_NAME=${MODEL_NAME:-gpt-3.5-turbo}
+      - TEMPERATURE=${TEMPERATURE:-0.7}
+      - DEBUG=${DEBUG:-False}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_WORKERS=${API_WORKERS:-1}
+      - MAX_TOKENS=${MAX_TOKENS:-2000}
+      - RESPONSE_FORMAT=${RESPONSE_FORMAT:-json}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s 
