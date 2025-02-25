@@ -21,7 +21,7 @@ dependencies = [
     "langchain-core>=0.1.15",
     "langchain-community>=0.0.13",
     "langchain-openai>=0.0.5",
-    "instructor>=0.4.5",
+    "instructor>=1.7.2",
     "pydantic>=2.5.3",
     "pydantic-settings>=2.1.0",
     "python-dotenv>=1.0.1",
@@ -33,10 +33,15 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
+    "pytest-cov>=4.1.0",
+    "bandit>=1.7.5",
+    "pre-commit>=3.5.0",
     "black>=23.0.0",
     "isort>=5.0.0",
     "mypy>=1.0.0",
     "ruff>=0.1.0",
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=2.0.0",
 ]
 
 [tool.black]
@@ -55,4 +60,20 @@ ignore_missing_imports = true
 [tool.ruff]
 select = ["E", "F", "B", "I"]
 ignore = []
-line-length = 88 
+line-length = 88
+
+[tool.pytest.ini_options]
+addopts = "--cov=src --cov-report=xml --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:"
+] 
