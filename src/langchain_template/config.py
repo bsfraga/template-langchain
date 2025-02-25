@@ -1,10 +1,11 @@
 """Configuration management for the application."""
 
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import secrets
 
 from .logger import get_logger
 
@@ -34,10 +35,37 @@ class Settings(BaseSettings):
     max_tokens: int = Field(2000, description="Maximum tokens for LLM response")
     response_format: str = Field("json", description="Response format")
     
+    # Segurança
+    SECRET_KEY: str = secrets.token_urlsafe(32)
+    DEBUG: bool = False
+    ENVIRONMENT: str = "development"
+    
+    # Configurações de API
+    API_V1_STR: str = "/api/v1"
+    PROJECT_NAME: str = "LangChain Template"
+    
+    # Segurança de CORS
+    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:3000"]
+    
+    # Configurações de Logging
+    LOG_LEVEL: str = "INFO"
+    LOG_FILE: Optional[str] = None
+    
+    # Validações de Segurança
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT == "production"
+    
+    def validate_cors_origins(self, origin: str) -> bool:
+        return any(
+            origin.startswith(allowed_origin) 
+            for allowed_origin in self.BACKEND_CORS_ORIGINS
+        )
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore"
     )
 
     def __init__(self, **kwargs):
@@ -55,4 +83,6 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance."""
     logger.debug("Retrieving settings instance from cache")
-    return Settings() 
+    return Settings()
+
+settings = Settings() 

@@ -4,55 +4,63 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from typing import Optional
 
-def setup_logger(name: str, log_file: Optional[str] = None, level: int = logging.INFO) -> logging.Logger:
+import structlog
+
+def configure_logging(
+    log_level: str = "INFO", 
+    log_file: Optional[str] = None
+) -> structlog.BoundLogger:
     """
-    Setup a logger with both console and file handlers.
+    Configura logging estruturado com suporte a console e arquivo.
     
     Args:
-        name: The name of the logger
-        log_file: Optional path to the log file. If None, only console logging is enabled
-        level: The logging level (default: INFO)
+        log_level (str): Nível de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        log_file (Optional[str]): Caminho para arquivo de log
     
     Returns:
-        logging.Logger: Configured logger instance
+        structlog.BoundLogger: Logger configurado
     """
-    # Create logger
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    
-    # Create formatters
-    detailed_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
+    # Configuração do logger base
+    logging.basicConfig(
+        format="%(message)s",
+        stream=sys.stdout,
+        level=getattr(logging, log_level.upper())
     )
-    console_formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s'
-    )
+
+    # Configuração do structlog
+    shared_processors = [
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.JSONRenderer()
+    ]
+
+    # Configuração de handlers
+    handlers = [logging.StreamHandler(sys.stdout)]
     
-    # Create console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
-    
-    # Create file handler if log_file is specified
     if log_file:
-        log_path = Path(log_file)
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        
         file_handler = RotatingFileHandler(
-            log_file,
-            maxBytes=10*1024*1024,  # 10MB
+            log_file, 
+            maxBytes=10 * 1024 * 1024,  # 10 MB
             backupCount=5
         )
-        file_handler.setFormatter(detailed_formatter)
-        logger.addHandler(file_handler)
-    
-    return logger
+        handlers.append(file_handler)
 
-# Create default logger instance
-default_logger = setup_logger(
-    'langchain_template',
-    log_file='logs/langchain_template.log'
-)
+    # Configuração final
+    structlog.configure(
+        processors=shared_processors,
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+
+    return structlog.get_logger()
+
+# Logger global
+logger = configure_logging()
 
 # Convenience functions
 def get_logger(name: str) -> logging.Logger:
@@ -61,4 +69,4 @@ def get_logger(name: str) -> logging.Logger:
 
 def set_log_level(level: int) -> None:
     """Set the log level for the default logger."""
-    default_logger.setLevel(level) 
+    logger.setLevel(level) 
